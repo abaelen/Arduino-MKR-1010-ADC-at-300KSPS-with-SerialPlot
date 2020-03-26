@@ -7,6 +7,8 @@
     uint8_t *ADCregL;
     uint8_t ADCreg[s];
 
+    uint32_t Tickreg[s];
+
 void setup() {
   // put your setup code here, to run once:
  
@@ -76,9 +78,23 @@ void setup() {
 
     //DMA settings: for later
 
+      //Bind RTC clock to 8MHz source and start it
+            RTC->MODE0.COUNT.bit.COUNT=0x00;
+            while (GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );
+            uint8_t *clkctrlID; clkctrlID = (uint8_t *) (0x40000C02UL); *clkctrlID=(int8_t) 4; //set clckctrl register to 30 - ADC
+            GCLK->CLKCTRL.bit.GEN = 0x3; //Change to 8MHzclock generator 3
+            while (GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );
+            GCLK->CLKCTRL.bit.CLKEN = 1;
+      //Before enabling initialize the RTC mode
+            RTC->MODE0.CTRL.bit.MODE=0x0; //32-bit count value
+            //CTRL.CLKREP not valid in Mode0
+            RTC->MODE0.CTRL.bit.PRESCALER=0x0; //DIV 1 we allow 8MHz
+            RTC->MODE1.READREQ.bit.RCONT=1; //Continuous reading 
 
-
-
+      //Enable the clock
+            RTC->MODE0.CTRL.bit.ENABLE=0x01;
+            while (GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );
+   
 //Print_register();
       
   ADC->CTRLA.bit.ENABLE=1;
@@ -106,7 +122,9 @@ void setup() {
     //Clock configuration
     ADCregH = (uint8_t *) (0x4200401A);
     ADCregL = (uint8_t *) (0x4200401B);
-i=0;
+    i=0;
+  //Reset clock value to avoid quick overrun. 8Mhz clock will fill 32bit in 537sec.
+    RTC->MODE0.COUNT.bit.COUNT=0; 
 }
 
 void loop() {
@@ -114,9 +132,11 @@ void loop() {
   // put your main code here, to run repeatedly:
   if (i<s){
     while (ADC->INTFLAG.bit.RESRDY==0);
+    Tickreg[i]=RTC->MODE0.COUNT.bit.COUNT;
     ADCreg[i]=*ADCregL;i++;ADCreg[i]=*ADCregH;i++;
   } else {
-   Serial.write(ADCreg,s);
+   Serial.write(ADCreg,s); //Left out Tickreg data as SerialPlot doesnt take timestamp
+   delay(2);
    i=0;
   };
 }
