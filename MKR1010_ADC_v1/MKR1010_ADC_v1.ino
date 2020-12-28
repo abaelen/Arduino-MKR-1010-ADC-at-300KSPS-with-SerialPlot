@@ -21,7 +21,7 @@ void setup() {
     GCLK->CLKCTRL.bit.GEN = 0x3; //Change to clock generator 3
     while (GCLK->STATUS.reg & GCLK_STATUS_SYNCBUSY );
     //Bus configuration
-    PM->APBCMASK.bit.ADC_=0x01; //enable APBCmask - already enabled by ArduinoCore with settings.
+    PM->APBCMASK.bit.ADC_=0x00; //enable APBCmask - already enabled by ArduinoCore with settings.
     //Reference settings
     ADC->REFCTRL.bit.REFSEL=0x2; //1/2 VDDANA (only for VDDANA > 2.0V)
     ADC->REFCTRL.bit.REFCOMP=0x00; //Reference buffer offset
